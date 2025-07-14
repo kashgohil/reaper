@@ -10,8 +10,12 @@ const ImageEditor: React.FC = () => {
   const [crop, setCrop] = useState<Crop>();
   const [croppedImageUrl, setCroppedImageUrl] = useState<string | null>(null);
   const [resizedImageUrl, setResizedImageUrl] = useState<string | null>(null);
+  const [convertedImageUrl, setConvertedImageUrl] = useState<string | null>(
+    null,
+  );
   const [width, setWidth] = useState<number>(0);
   const [height, setHeight] = useState<number>(0);
+  const [targetFormat, setTargetFormat] = useState<string>("png");
   const [isDragging, setIsDragging] = useState(false);
 
   const imgRef = useRef<HTMLImageElement | null>(null);
@@ -26,7 +30,8 @@ const ImageEditor: React.FC = () => {
       console.log("Payload is array:", Array.isArray(event.payload));
       console.log("Payload length:", event.payload?.length);
       console.log("Full event object:", event);
-      console.log("Current dragging state before drop:", isDragging);
+      console.log("Event keys:", Object.keys(event));
+      setIsDragging(false);
 
       // Try different ways to extract the file path
       let filePath: string | undefined;
@@ -46,6 +51,8 @@ const ImageEditor: React.FC = () => {
           event.payload.files?.[0];
         console.log("Extracted from object:", filePath);
         console.log("Available properties:", Object.keys(event.payload));
+      } else {
+        console.log("Payload is neither array, string, nor object");
       }
 
       console.log("Final extracted file path:", filePath);
@@ -55,68 +62,36 @@ const ImageEditor: React.FC = () => {
         console.error("No file path provided");
         console.error("Debug - payload:", event.payload);
         console.error("Debug - payload type:", typeof event.payload);
-        setIsDragging(false);
         return;
       }
 
       try {
         console.log("Reading file:", filePath);
-        console.log("File path type:", typeof filePath);
-
-        // Use the custom Tauri command instead of fs plugin for now
         const imageDataUrl = await invoke<string>("read_image_file", {
           path: filePath,
         });
-
-        console.log("Raw response from read_image_file:", imageDataUrl);
-        console.log("Response type:", typeof imageDataUrl);
-        console.log("Response length:", imageDataUrl ? imageDataUrl.length : 0);
-
-        if (imageDataUrl && imageDataUrl.length > 0) {
-          console.log("Setting image state with data URL");
-          console.log(
-            "First 100 chars of data URL:",
-            imageDataUrl.substring(0, 100),
-          );
-          setImage(imageDataUrl);
-          setCroppedImageUrl(null);
-          setResizedImageUrl(null);
-          console.log("Image state should be set now");
-        } else {
-          console.error("Received empty or invalid image data");
-        }
-
-        // Force reset dragging state after successful load
-        console.log("Resetting drag state after successful load");
-        setIsDragging(false);
-      } catch (error) {
-        console.error("Error loading image:", error);
-        console.error("Error details:", JSON.stringify(error));
-        // Reset state even if there's an error
-        setImage(null);
+        console.log("Image loaded successfully");
+        setImage(imageDataUrl);
         setCroppedImageUrl(null);
         setResizedImageUrl(null);
-        setIsDragging(false);
+        setConvertedImageUrl(null);
+      } catch (error) {
+        console.error("Error loading image:", error);
       }
     });
 
     const unlistenDragEnter = listen<string>("tauri://drag-enter", () => {
-      console.log("Drag enter detected, setting isDragging to true");
+      console.log("Drag enter detected");
       setIsDragging(true);
     });
 
     const unlistenDragLeave = listen<string>("tauri://drag-leave", () => {
-      console.log("Drag leave detected, setting isDragging to false");
+      console.log("Drag leave detected");
       setIsDragging(false);
     });
 
     const unlistenDragOver = listen<string>("tauri://drag-over", () => {
       console.log("Drag over detected");
-      // Ensure we're in dragging state during drag over
-      if (!isDragging) {
-        console.log("Setting dragging state to true during drag over");
-        setIsDragging(true);
-      }
     });
 
     return () => {
@@ -135,6 +110,7 @@ const ImageEditor: React.FC = () => {
         setImage(event.target?.result as string);
         setCroppedImageUrl(null);
         setResizedImageUrl(null);
+        setConvertedImageUrl(null);
       };
       reader.readAsDataURL(e.target.files[0]);
     }
@@ -168,6 +144,16 @@ const ImageEditor: React.FC = () => {
     }
   };
 
+  const handleConvert = async () => {
+    if (image) {
+      const convertedImage = await invoke("convert_image", {
+        imageData: image,
+        targetFormat: targetFormat,
+      });
+      setConvertedImageUrl(convertedImage as string);
+    }
+  };
+
   const handleDivClick = () => {
     inputRef.current?.click();
   };
@@ -178,7 +164,7 @@ const ImageEditor: React.FC = () => {
       <div
         onClick={handleDivClick}
         className={`border border-dashed rounded-lg p-8 flex flex-col items-center justify-center cursor-pointer transition-colors border-red-400 ${
-          isDragging && " bg-red-200/25"
+          isDragging ? " bg-red-200/20" : ""
         }`}
       >
         <Upload size={72} className="text-red-500" />
@@ -193,7 +179,7 @@ const ImageEditor: React.FC = () => {
           id="upload"
           type="file"
           ref={inputRef}
-          accept="image/*"
+          accept="image/*,.ico,.icns,.tiff,.tga"
           className="text-center"
           onChange={handleImageChange}
         />
@@ -224,21 +210,34 @@ const ImageEditor: React.FC = () => {
         <div className="flex items-center justify-center space-x-2 mt-4">
           <button
             onClick={handleCrop}
-            className="p-2 text-lg px-4 rounded-lg bg-red-500 text-black font-metal-mania tracking-wide"
+            className="p-1.5 text-xl px-4 rounded-lg bg-red-500 hover:bg-red-400 transition-colors duration-200 text-black font-metal-mania tracking-wide"
           >
             Crop
           </button>
           <button
-            onClick={handleCrop}
-            className="p-2 px-4 text-lg rounded-lg bg-red-500 text-black font-metal-mania tracking-wide"
+            onClick={handleResize}
+            className="p-1.5 px-4 text-xl rounded-lg bg-red-500 hover:bg-red-400 transition-colors duration-200 text-black font-metal-mania tracking-wide"
           >
             Resize
           </button>
-          <button
-            onClick={handleCrop}
-            className="p-2 px-4 text-lg rounded-lg bg-red-500 text-black font-metal-mania tracking-wide"
+          <select
+            onChange={(e) => setTargetFormat(e.target.value)}
+            className="p-1.5 text-xl px-4 rounded-lg bg-red-500 hover:bg-red-400 transition-colors duration-200 text-black font-metal-mania tracking-wide !shadow-none"
           >
-            Edit
+            <option value="png">PNG</option>
+            <option value="jpeg">JPEG</option>
+            <option value="gif">GIF</option>
+            <option value="bmp">BMP</option>
+            <option value="webp">WEBP</option>
+            <option value="ico">ICO</option>
+            <option value="tiff">TIFF</option>
+            <option value="tga">TGA</option>
+          </select>
+          <button
+            onClick={handleConvert}
+            className="p-1.5 px-4 text-xl rounded-lg bg-red-500 hover:bg-red-400 transition-colors duration-200 text-black font-metal-mania tracking-wide"
+          >
+            Convert
           </button>
         </div>
       </div>
@@ -259,6 +258,12 @@ const ImageEditor: React.FC = () => {
         <div>
           <h2>Resized Image</h2>
           <img alt="Resize" src={resizedImageUrl} />
+        </div>
+      )}
+      {convertedImageUrl && (
+        <div>
+          <h2>Converted Image</h2>
+          <img alt="Converted" src={convertedImageUrl} />
         </div>
       )}
     </div>
