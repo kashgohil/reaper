@@ -71,11 +71,19 @@ fn resize_image(image_data: &str, width: u32, height: u32) -> Result<String, Str
 
 #[tauri::command]
 fn convert_image(image_data: &str, target_format: &str) -> Result<String, String> {
+    // Validate input is a data URL
+    if !image_data.starts_with("data:") || !image_data.contains(",") {
+        return Err("Input is not a valid data URL (expected 'data:<mime>;base64,<data>')".to_string());
+    }
     let base64_data = image_data.split(',').nth(1).unwrap_or("");
+    if base64_data.is_empty() {
+        return Err("No base64 data found in the input data URL.".to_string());
+    }
     let decoded_data = general_purpose::STANDARD
         .decode(base64_data)
-        .map_err(|e| e.to_string())?;
-    let img = image::load_from_memory(&decoded_data).map_err(|e| e.to_string())?;
+        .map_err(|e| format!("Failed to decode base64 image data: {}", e))?;
+    let img = image::load_from_memory(&decoded_data)
+        .map_err(|e| format!("Failed to decode image from memory: {}", e))?;
 
     let mut buffer = Cursor::new(Vec::new());
     let (format, mime_type_str) = match target_format {
@@ -87,11 +95,16 @@ fn convert_image(image_data: &str, target_format: &str) -> Result<String, String
         "ico" => (ImageFormat::Ico, "image/vnd.microsoft.icon"),
         "tiff" => (ImageFormat::Tiff, "image/tiff"),
         "tga" => (ImageFormat::Tga, "image/x-tga"),
-        _ => return Err("Unsupported image format".to_string()),
+        _ => {
+            return Err(format!(
+                "Unsupported image format: '{}'. Supported formats: png, jpeg, gif, bmp, webp, ico, tiff, tga.",
+                target_format
+            ));
+        }
     };
 
     img.write_to(&mut buffer, format)
-        .map_err(|e| e.to_string())?;
+        .map_err(|e| format!("Failed to write image in target format '{}': {}", target_format, e))?;
     let base64_result = general_purpose::STANDARD.encode(buffer.get_ref());
 
     Ok(format!("data:{};base64,{}", mime_type_str, base64_result))
