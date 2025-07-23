@@ -1,62 +1,67 @@
 @import "tailwindcss";
 
 @font-face {
-  font-family: "MetalMania";
-  src: url("./assets/MetalMania-Regular.ttf") format("truetype");
-  font-weight: 400;
-  font-style: normal;
+	font-family: "MetalMania";
+	src: url("./assets/MetalMania-Regular.ttf") format("truetype");
+	font-weight: 400;
+	font-style: normal;
 }
 
 @theme {
-  --font-metal-mania: "MetalMania", serif;
+	--font-metal-mania: "MetalMania", serif;
 }
 
 :root {
-  font-family: Inter, Avenir, Helvetica, Arial, sans-serif;
-  font-size: 16px;
-  line-height: 24px;
-  font-weight: 400;
+	font-family: Inter, Avenir, Helvetica, Arial, sans-serif;
+	font-size: 16px;
+	line-height: 24px;
+	font-weight: 400;
 
-  color: #0f0f0f;
-  background-color: #f6f6f6;
+	color: #0f0f0f;
+	background-color: #f6f6f6;
 
-  font-synthesis: none;
-  text-rendering: optimizeLegibility;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-  -webkit-text-size-adjust: 100%;
+	font-synthesis: none;
+	text-rendering: optimizeLegibility;
+	-webkit-font-smoothing: antialiased;
+	-moz-osx-font-smoothing: grayscale;
+	-webkit-text-size-adjust: 100%;
 
-  margin: 0;
-  padding: 0;
-  box-sizing: border-box;
-}
-
-a {
-  font-weight: 500;
-  color: #646cff;
-  text-decoration: inherit;
-}
-
-a:hover {
-  color: #535bf2;
+	margin: 0;
+	padding: 0;
+	box-sizing: border-box;
 }
 
 button {
-  cursor: pointer;
+	cursor: pointer;
 }
 
 input,
 button {
-  outline: none;
+	outline: none;
+}
+
+/* Loader spinner */
+.loader {
+	border: 6px solid #f3f3f3;
+	border-top: 6px solid #e11d48;
+	border-radius: 50%;
+	width: 48px;
+	height: 48px;
+	animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+	0% {
+		transform: rotate(0deg);
+	}
+	100% {
+		transform: rotate(360deg);
+	}
 }
 
 @media (prefers-color-scheme: dark) {
-  :root {
-    color: #f6f6f6;
-    background-color: var(--color-red-500);
-  }
-
-  a:hover {
-    color: #24c8db;
-  }
+	:root {
+		color: #f6f6f6;
+		background-color: var(--color-red-500);
+	}
 }
