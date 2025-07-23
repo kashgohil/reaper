@@ -2,6 +2,8 @@ use base64::{engine::general_purpose, Engine as _};
 use image::{imageops::FilterType, ImageFormat};
 use std::fs;
 use std::io::Cursor;
+use tauri_plugin_dialog::init as dialog_init;
+use tauri_plugin_fs::init as fs_init;
 
 fn get_image_format(mime_type: &str) -> Option<ImageFormat> {
     match mime_type {
@@ -153,7 +155,8 @@ fn read_image_file(path: &str) -> Result<String, String> {
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
-        .plugin(tauri_plugin_opener::init())
+        .plugin(dialog_init())
+        .plugin(fs_init())
         .invoke_handler(tauri::generate_handler![
             greet,
             crop_image,
