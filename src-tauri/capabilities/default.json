@@ -14,6 +14,7 @@
 		"fs:allow-app-write",
 		"dialog:default",
 		"dialog:allow-save",
+		"dialog:allow-open",
 		{
 			"identifier": "fs:scope",
 			"allow": [
@@ -21,7 +22,8 @@
 				{ "path": "$DESKTOP/**" },
 				{ "path": "$DOWNLOAD/**" },
 				{ "path": "$PICTURE/**" },
-				{ "path": "$DOCUMENT/**" }
+				{ "path": "$DOCUMENT/**" },
+				{ "path": "$TEMP/**" }
 			]
 		}
 	]

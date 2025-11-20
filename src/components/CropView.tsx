@@ -1,5 +1,5 @@
 import { invoke } from "@tauri-apps/api/core";
-import React, { useContext, useEffect, useRef, useState } from "react";
+import React, { useCallback, useContext, useEffect, useRef, useState } from "react";
 import ReactCrop, { Crop } from "react-image-crop";
 import "react-image-crop/dist/ReactCrop.css";
 import { formatFileSize, getImageMetadata, handleDownloadWithToast } from "../utils";
@@ -28,10 +28,20 @@ const CropView: React.FC<CropViewProps> = ({ image, fileName, clear }) => {
 	const mouseStart = useRef<{ x: number; y: number } | null>(null);
 	const panRef = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
 	const animationFrameRef = useRef<number | null>(null);
+	const debounceTimeoutRef = useRef<number | null>(null);
 
 	const onImageLoad = (e: React.SyntheticEvent<HTMLImageElement>) => {
 		imgRef.current = e.currentTarget;
 	};
+
+	const debouncedSetCrop = useCallback((newCrop: Crop) => {
+		if (debounceTimeoutRef.current) {
+			clearTimeout(debounceTimeoutRef.current);
+		}
+		debounceTimeoutRef.current = window.setTimeout(() => {
+			setCrop(newCrop);
+		}, 100);
+	}, []);
 
 	const handleCrop = async () => {
 		if (imgRef.current && crop?.width && crop?.height) {
@@ -88,12 +98,9 @@ const CropView: React.FC<CropViewProps> = ({ image, fileName, clear }) => {
 			y: (panStart.current?.y || 0) + dy,
 		};
 		panRef.current = newPan;
-		if (!animationFrameRef.current) {
-			animationFrameRef.current = requestAnimationFrame(() => {
-				setPan(panRef.current);
-				animationFrameRef.current = null;
-			});
-		}
+		animationFrameRef.current = requestAnimationFrame(() => {
+			setPan(panRef.current);
+		});
 	}
 	function handlePanEnd() {
 		setIsPanning(false);
@@ -216,7 +223,7 @@ const CropView: React.FC<CropViewProps> = ({ image, fileName, clear }) => {
 					)}
 					<ReactCrop
 						crop={crop}
-						onChange={panMode ? () => {} : (c, _) => setCrop(c)}
+						onChange={panMode ? () => {} : (c, _) => debouncedSetCrop(c)}
 						style={{ border: "none", background: "transparent" }}
 						ruleOfThirds
 						disabled={panMode || isCropping}
